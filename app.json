@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "poc_data_collector_expo",
-    "slug": "poc_data_collector_expo",
+    "slug": "poc-data-collector",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -15,16 +15,24 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "i"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.jayzou3773.pocdatacollector"
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "eec5bfa2-3d3d-4afc-87de-2eb1172b53ad"
+      }
+    },
+    "owner": "socity"
   }
 }

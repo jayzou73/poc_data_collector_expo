@@ -1,0 +1,12 @@
+{
+    "accelerometerx" :"acc_x",
+    "accelerometery" :"acc_y",
+    "accelerometerz" :"acc_z",
+    "gyroscopex" :"gyro_x",
+    "gyroscopey" :"gyro_y",
+    "gyroscopez" :"gyro_z",
+    "magnetometerx" :"mag_x",
+    "magnetometery" :"mag_y",
+    "magnetometerz" :"mag_z",
+    "barometerpressure" :"p"
+}
