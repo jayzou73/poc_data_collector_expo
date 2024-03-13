@@ -14,7 +14,9 @@ import SensorCard from "./src/components/SensorCard";
 import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
 // import 'react-native-get-random-values';
-// import { v4 as uuidv4 } from 'uuid';
+// import { v4 as uuidv4 } from 'uuid'
+
+const VERSION = "1.0.0"
 
 // let uuid = uuidv4();
 const App = () => {
@@ -150,6 +152,7 @@ const App = () => {
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.deviceID}>Device ID: {deviceId}</Text>
+      <Text style={styles.deviceID}>App Version: {VERSION}</Text>
       <View style={styles.pickerContainer}>
         <Picker
           selectedValue={activityType}
