@@ -1,11 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { ScrollView, StyleSheet, Text, View, Button, Alert } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
-import * as Device from 'expo-device';
-import LocationCard from './src/components/LocationCard';
-import SensorCard from './src/components/SensorCard';
-import * as FileSystem from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  Button,
+  Alert,
+} from "react-native";
+import { Picker } from "@react-native-picker/picker";
+import * as Device from "expo-device";
+import LocationCard from "./src/components/LocationCard";
+import SensorCard from "./src/components/SensorCard";
+import * as FileSystem from "expo-file-system";
+import * as Sharing from "expo-sharing";
 // import 'react-native-get-random-values';
 // import { v4 as uuidv4 } from 'uuid';
 
@@ -14,21 +21,27 @@ const App = () => {
   const [location, setLocation] = useState(null);
   const [sensorData, setSensorData] = useState({});
   const [isRecording, setIsRecording] = useState(false);
-  const [activityType, setActivityType] = useState('1'); // 默认为 "Walk"
-  const [deviceId, setDeviceId] = useState('');
+  const [activityType, setActivityType] = useState("1"); // 默认为 "Walk"
+  const [deviceId, setDeviceId] = useState("");
   const [recordingInterval, setRecordingInterval] = useState(null);
 
-  const fileUri = `${FileSystem.documentDirectory}1.json`;
+  const fileUri = `${FileSystem.documentDirectory}${deviceId}.json`;
 
   const storeData = async (data) => {
     try {
-      const existingData = await FileSystem.readAsStringAsync(fileUri, { encoding: FileSystem.EncodingType.UTF8 });
+      const existingData = await FileSystem.readAsStringAsync(fileUri, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
       const newData = JSON.parse(existingData);
       newData.push(data);
-      await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(newData), { encoding: FileSystem.EncodingType.UTF8 });
+      await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(newData), {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
     } catch (e) {
       // 如果文件不存在，就创建一个新文件
-      await FileSystem.writeAsStringAsync(fileUri, JSON.stringify([data]), { encoding: FileSystem.EncodingType.UTF8 });
+      await FileSystem.writeAsStringAsync(fileUri, JSON.stringify([data]), {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
     }
   };
 
@@ -41,9 +54,9 @@ const App = () => {
     const interval = setInterval(async () => {
       const timestamp = new Date().toISOString();
       const dataToStore = {
-        location, // 直接使用 LocationCard 更新的位置状态
-        sensorData, // 由 SensorCard 通过 updateSensorData 更新的传感器数据
-        activityType,
+        ...getCurrentLocation(), // 直接使用 LocationCard 更新的位置状态
+        sensorData: getCurrentSensorData(), // 由 SensorCard 通过 updateSensorData 更新的传感器数据
+        activityType: getCurrentActivityType(),
         deviceId,
         timestamp,
       };
@@ -52,24 +65,45 @@ const App = () => {
     setRecordingInterval(interval);
   };
 
+  const locationRef = useRef(location);
+  const sensorDataRef = useRef(sensorData);
+  const activityTypeRef = useRef(activityType);
 
+  useEffect(() => {
+    locationRef.current = location;
+  }, [location]);
+
+  useEffect(() => {
+    sensorDataRef.current = sensorData;
+  }, [sensorData]);
+
+  useEffect(() => {
+    activityTypeRef.current = activityType;
+  }, [activityType]);
+
+  const getCurrentLocation = () => locationRef.current;
+  const getCurrentSensorData = () => sensorDataRef.current;
+  const getCurrentActivityType = () => activityTypeRef.current;
 
   // 停止记录，并读取文件内容
   const stopRecording = async () => {
     setIsRecording(false);
     clearInterval(recordingInterval);
     try {
-      const fileContent = await FileSystem.readAsStringAsync(fileUri, { encoding: FileSystem.EncodingType.UTF8 });
-      console.log('Stop recording, data loaded:', fileContent);
-      console.log('Data saved in file:', fileUri);
+      const fileContent = await FileSystem.readAsStringAsync(fileUri, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+      //   console.log(location)
+      console.log("Stop recording, data loaded:", fileContent);
+      console.log("Data saved in file:", fileUri);
     } catch (error) {
-      console.error('Failed to read data', error);
+      console.error("Failed to read data", error);
     }
   };
 
   const shareRecording = async () => {
     if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(fileUri).catch(error => {
+      await Sharing.shareAsync(fileUri).catch((error) => {
         console.error("Sharing error:", error);
         Alert.alert("Error", "Failed to share recording.");
       });
@@ -78,17 +112,39 @@ const App = () => {
     }
   };
 
+  const showConfirmationDialog = () => {
+    Alert.alert(
+      "Confirm Clear", // Dialog title
+      "Are you sure you want to clear the collected dataset?", // Dialog message
+      [
+        {
+          text: "Cancel",
+          onPress: () => console.log("Cancel action"),
+          style: "cancel",
+        },
+        { text: "Confirm", onPress: () => resetDataset() }, // Confirm action
+      ],
+      { cancelable: false } // Prevents the dialog from closing when touching outside
+    );
+  };
+
+  const resetDataset = async () => {
+    await FileSystem.writeAsStringAsync(fileUri, JSON.stringify([]), {
+      encoding: FileSystem.EncodingType.UTF8,
+    });
+  };
+
   useEffect(() => {
     // 使用 expo-device 获取设备ID
     setDeviceId(Device.osBuildId); // expo-device 不直接提供 getUniqueId，这里用 osBuildId 作为示例
   }, []);
 
-  const updateLocation = (newLocation) => {
-    setLocation(newLocation.coords);
-  };
+  //   const updateLocation = (newLocation) => {
+  //     setLocation(newLocation.coords);
+  //   };
 
   const updateSensorData = (sensorName, data) => {
-    setSensorData(currentData => ({ ...currentData, [sensorName]: data }));
+    setSensorData((currentData) => ({ ...currentData, [sensorName]: data }));
   };
 
   return (
@@ -101,10 +157,11 @@ const App = () => {
             if (!isRecording) {
               setActivityType(itemValue);
             } else {
-              Alert.alert('Stop recording first!');
+              Alert.alert("Stop recording first!");
             }
           }}
-          style={styles.picker}>
+          style={styles.picker}
+        >
           <Picker.Item label="Walk" value="1" />
           <Picker.Item label="Run" value="2" />
           <Picker.Item label="Bike" value="3" />
@@ -114,30 +171,60 @@ const App = () => {
         </Picker>
       </View>
       <View style={styles.buttons}>
-        <Button title="Record" onPress={startRecording} color="green" disabled={isRecording} />
-        <Button title="Stop" onPress={stopRecording} color="red" disabled={!isRecording} />
-        <Button title="Share" onPress={shareRecording} color="blue" disabled={isRecording} />
+        <Button
+          title="Record"
+          onPress={startRecording}
+          color="green"
+          disabled={isRecording}
+        />
+        <Button
+          title="Stop"
+          onPress={stopRecording}
+          color="red"
+          disabled={!isRecording}
+        />
+        <Button
+          title="Share"
+          onPress={shareRecording}
+          color="blue"
+          disabled={isRecording}
+        />
       </View>
       <Text style={styles.status}>
-        Status: {isRecording ? 'Recording...' : 'Not Recording'}
+        Status: {isRecording ? "Recording..." : "Not Recording"}
       </Text>
       <LocationCard
-        updateLocation={updateLocation} // 传递样式
+        setLocation={setLocation} // 传递样式
       />
       {location && (
-        <Text>Location: Latitude {location.latitude}, Longitude {location.longitude}</Text>
+        <Text>
+          Location: Latitude {location.latitude}, Longitude {location.longitude}
+        </Text>
       )}
-      <SensorCard sensorName="accelerometer" updateSensorData={updateSensorData} />
+      <SensorCard
+        sensorName="accelerometer"
+        updateSensorData={updateSensorData}
+      />
       <SensorCard sensorName="gyroscope" updateSensorData={updateSensorData} />
-      <SensorCard sensorName="magnetometer" updateSensorData={updateSensorData} />
+      <SensorCard
+        sensorName="magnetometer"
+        updateSensorData={updateSensorData}
+      />
       {Object.entries(sensorData).map(([key, value]) => (
         <View style={styles.sensorDataContainer} key={key}>
           <Text style={styles.sensorDataText}>
-            {key}: x {value.x.toFixed(3)}, y {value.y.toFixed(3)}, z {value.z.toFixed(3)}
+            {key}: x {value.x.toFixed(3)}, y {value.y.toFixed(3)}, z{" "}
+            {value.z.toFixed(3)}
           </Text>
         </View>
       ))}
-
+      <View>
+        <Button
+          title="Clean Collected Dataset"
+          onPress={showConfirmationDialog}
+          color="red"
+        />
+      </View>
     </ScrollView>
   );
 };
@@ -147,45 +234,45 @@ const styles = StyleSheet.create({
     flex: 1,
     marginTop: 20,
     padding: 10,
-    backgroundColor: '#fff', // 添加背景色以提高可读性
+    backgroundColor: "#fff", // 添加背景色以提高可读性
   },
   deviceID: {
     marginBottom: 20,
-    textAlign: 'center',
+    textAlign: "center",
     fontSize: 16, // 调整字体大小以提高可读性
     padding: 10, // 添加内边距以避免文本紧贴边缘
   },
   pickerContainer: {
     marginBottom: 20,
     borderWidth: 1, // 添加边框以突出显示 Picker
-    borderColor: '#ddd', // 使用柔和的边框颜色
+    borderColor: "#ddd", // 使用柔和的边框颜色
     borderRadius: 5, // 轻微圆角以符合现代 UI 设计
   },
   picker: {
-    width: '100%',
+    width: "100%",
     height: 50,
   },
   buttons: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
+    flexDirection: "row",
+    justifyContent: "space-around",
     marginBottom: 50,
-    marginTop: 150
+    marginTop: 150,
   },
   buttonText: {
-    color: '#fff', // 设置按钮文本颜色为白色
-    textAlign: 'center', // 按钮文本居中
+    color: "#fff", // 设置按钮文本颜色为白色
+    textAlign: "center", // 按钮文本居中
   },
   recordingStatus: {
     fontSize: 18,
-    color: 'red',
+    color: "red",
     margin: 10,
-    textAlign: 'center',
+    textAlign: "center",
   },
   locationCardStyle: {
     // 定义 LocationCard 的样式
     padding: 20,
-    alignItems: 'center',
-    backgroundColor: '#f0f0f0', // 仅示例，根据需要调整
+    alignItems: "center",
+    backgroundColor: "#f0f0f0", // 仅示例，根据需要调整
     borderRadius: 10,
     margin: 10,
   },
@@ -196,11 +283,10 @@ const styles = StyleSheet.create({
     fontSize: 14, // 调整传感器数据字体大小
     padding: 5, // 为传感器数据添加内边距
     borderWidth: 1, // 为传感器数据添加边框
-    borderColor: '#ddd', // 使用柔和的边框颜色
+    borderColor: "#ddd", // 使用柔和的边框颜色
     borderRadius: 5, // 轻微圆角
     marginBottom: 5, // 添加间隔以避免文本紧贴
   },
 });
-
 
 export default App;

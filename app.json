@@ -16,7 +16,14 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "i"
+      "bundleIdentifier": "i",
+      "infoPlist": {
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Your app requires background location tracking for XYZ features.",
+        "NSLocationWhenInUseUsageDescription": "Your app requires location access to function properly.",
+        "UIBackgroundModes": [
+          "location"
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
